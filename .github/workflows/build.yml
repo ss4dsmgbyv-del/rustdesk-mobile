@@ -1,0 +1,44 @@
+name: Build Kivy APK
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install system deps
+      run: |
+        sudo apt update
+        sudo apt install -y python3-pip git openjdk-17-jdk unzip zip zlib1g-dev \
+          libssl-dev libffi-dev libjpeg-dev libfreetype6-dev build-essential
+
+    - name: Install Buildozer & tools
+      run: |
+        python3 -m pip install --upgrade pip setuptools wheel
+        python3 -m pip install Cython==0.29.35 virtualenv
+        python3 -m pip install buildozer==1.4.4
+
+    - name: Initialize Android SDK (Buildozer will fetch SDK/NDK later)
+      run: |
+        # create .buildozer dir so buildozer can cache sdk between runs (optional)
+        mkdir -p $HOME/.buildozer
+
+    - name: Build APK with Buildozer
+      run: |
+        # clean previous
+        buildozer android debug || true
+      env:
+        ANDROIDSDK: $HOME/.buildozer/android/platform/android-sdk
+
+    - name: Upload artifact (APK)
+      uses: actions/upload-artifact@v4
+      with:
+        name: rustdesk-apk
+        path: bin/*.apk
